@@ -224,17 +224,6 @@ struct IterativeNode {
     size_t triangleStart;
     glm::vec3 aabbMin;
     glm::vec3 aabbMax;
-
-    IterativeNode(const BVHBuildNode* bvhNode, size_t childrenStart, size_t triangleStart) {
-        childCount = bvhNode->Nodes.size();
-        this->childrenStart = childCount == 0 ? 0 : childrenStart;
-
-        triangleCount = bvhNode->Triangles ? bvhNode->Triangles->size() : 0;
-        this->triangleStart = triangleCount == 0 ? 0 : triangleStart;
-
-        aabbMin = bvhNode->Min;
-        aabbMax = bvhNode->Max;
-    }
 };
 
 struct IterativeBVH {
@@ -246,23 +235,44 @@ struct IterativeBVH {
         triangles = std::vector<BVHBuildTriangle*>();
     }
 
-    void convertBvhToIterative(const BVHBuildNode* bvhNode) {
-        auto triangleOffset = triangles.size();
-        if (bvhNode == nullptr) {
+    void makeIterativeNode(IterativeNode* outNode, const BVHBuildNode* bvhNode, size_t childrenStart, size_t triangleStart) {
+        outNode->childCount = bvhNode->Nodes.size();
+        outNode->triangleCount = bvhNode->Triangles ? bvhNode->Triangles->size() : 0;
+        outNode->aabbMin = bvhNode->Min;
+        outNode->aabbMax = bvhNode->Max;
+    }
+
+    void flatten(BVHBuildNode* root) {
+        if (!root) {
+            LogError("Root of bvh is Null!");
             return;
         }
 
+        nodes.resize(root->GetNodeCount());
+        triangles.reserve(root->GetTriangleCount());
+        size_t offset = 0;
+        convertBvhToIterative(root, &offset);
+    }
+
+    size_t convertBvhToIterative(const BVHBuildNode* bvhNode, size_t* offset) {
+        auto currentNode = &nodes[*offset];
+        auto nextOffset = (*offset)++;
+        if (bvhNode == nullptr) {
+            return nextOffset;
+        }
+
+        auto triangleOffset = triangles.size();
         if (bvhNode->Triangles) {
             for (uint32_t i = 0; i < bvhNode->Triangles->size(); ++i) {
                 triangles.push_back(&bvhNode->Triangles->at(i));
             }
+            return nextOffset;
         }
 
-        auto childrenStart = nodes.size() + 1;
-        nodes.push_back(IterativeNode(bvhNode, childrenStart, triangleOffset));
-        for (auto node : bvhNode->Nodes) {
-            convertBvhToIterative(node);
-        }
+        convertBvhToIterative(bvhNode->Nodes[0], offset);
+        makeIterativeNode(currentNode, bvhNode, nextOffset, triangleOffset);
+        currentNode->childrenStart = convertBvhToIterative(bvhNode->Nodes[1], offset);
+        return nextOffset;
     }
 };
 
@@ -333,7 +343,7 @@ struct BVH {
         GlobalProfiler.StopCPUQuery(querySplit);
 
         auto iterativeBvh = IterativeBVH();
-        iterativeBvh.convertBvhToIterative(BVHRoot);
+        iterativeBvh.flatten(BVHRoot);
     }
 
     void Draw(int maxNodeLevel) {
