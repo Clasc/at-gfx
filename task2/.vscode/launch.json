@@ -1,0 +1,12 @@
+{
+    "configurations": [
+        {
+            "name": "(Windows) Anfügen",
+            "request": "launch",
+            "type": "cppvsdbg",
+            "program": "${workspaceFolder}${pathSeparator}binaries${pathSeparator}x64_debug${pathSeparator}rrt_debug.exe",
+            "cwd": "${workspaceFolder}${pathSeparator}binaries${pathSeparator}x64_debug",
+            "preLaunchTask": "build"
+        }
+    ]
+}
