@@ -1,6 +1,5 @@
 
-struct BVHBuildTriangle
-{
+struct BVHBuildTriangle {
     glm::vec3 Min;
     glm::vec3 Max;
 
@@ -15,18 +14,16 @@ struct BVHBuildTriangle
     uint32_t MaterialIndex;
 };
 
-struct BVHBuildNode
-{
+struct BVHBuildNode {
     glm::vec3 Min;
     glm::vec3 Max;
     std::vector<BVHBuildTriangle>* Triangles;
     std::vector<BVHBuildNode*> Nodes;
     float Cost;
 
-    bool Intersects(glm::vec3 minA, glm::vec3 maxA, glm::vec3 minB, glm::vec3 maxB)
-    {
-        if ( minA.x > maxB.x || minA.y > maxB.y || minA.z > maxB.z ) return false;
-        if ( minB.x > maxA.x || minB.y > maxA.y || minB.z > maxA.z ) return false;
+    bool Intersects(glm::vec3 minA, glm::vec3 maxA, glm::vec3 minB, glm::vec3 maxB) {
+        if (minA.x > maxB.x || minA.y > maxB.y || minA.z > maxB.z) return false;
+        if (minB.x > maxA.x || minB.y > maxA.y || minB.z > maxA.z) return false;
         return true;
     };
 
@@ -36,15 +33,13 @@ struct BVHBuildNode
         Triangles = new std::vector<BVHBuildTriangle>();
     }
 
-    void 
-    ComputeCost() {
+    void ComputeCost() {
         glm::vec3 size = Max - Min;
-        Cost = (size.x * size.y * 2 + size.x * size.z * 2 + size.y * size.z * 2) * Triangles->size();  
+        Cost = (size.x * size.y * 2 + size.x * size.z * 2 + size.y * size.z * 2) * Triangles->size();
     }
 
-    void
-    Split() {
-        if(GetTriangleCount() <= BVH_MAX_TRIANGLES_PER_NODE) {
+    void Split() {
+        if (GetTriangleCount() <= BVH_MAX_TRIANGLES_PER_NODE) {
             return;
         }
 
@@ -62,7 +57,7 @@ struct BVHBuildNode
         for (int axis = 0; axis < 3; ++axis) {
             const int maxSplits = 10;
             for (int split = 1; split < maxSplits; ++split) {
-                
+
                 #if BVH_USE_RANDOM
                 // Compute random splits.
                 for (int c = 0; c < BVH_MAX_CHILD_NODES - 1; ++c) {
@@ -95,14 +90,14 @@ struct BVHBuildNode
                     float center = (triangle.Min[axis] + triangle.Max[axis]) * 0.5f;
 
                     for (int c = 0; c < BVH_MAX_CHILD_NODES; ++c) {
-                        if(center >= candidates[c]->Min[axis] && center < candidates[c]->Max[axis]) {
+                        if (center >= candidates[c]->Min[axis] && center < candidates[c]->Max[axis]) {
                             candidates[c]->Triangles->push_back(triangle);
                             break;
                         }
-                    }  
+                    }
                 }
 
-                float costOverall =  0;
+                float costOverall = 0;
                 for (int c = 0; c < BVH_MAX_CHILD_NODES; ++c) {
                     candidates[c]->CompactAABB();
                     candidates[c]->ComputeCost();
@@ -110,14 +105,14 @@ struct BVHBuildNode
                     costOverall += candidates[c]->Cost;
                 }
 
-                if(costOverall < bestCost) {
+                if (costOverall < bestCost) {
                     bestCost = costOverall;
                     for (int c = 0; c < BVH_MAX_CHILD_NODES; ++c) {
                         BVHBuildNode* newCandidate = 0;
-                        if(children[c]) {
+                        if (children[c]) {
                             newCandidate = children[c];
                         }
-                        if(!newCandidate) {
+                        if (!newCandidate) {
                             newCandidate = new BVHBuildNode();
                         }
                         children[c] = candidates[c];
@@ -147,7 +142,7 @@ struct BVHBuildNode
         }
 
         for (int c = 0; c < BVH_MAX_CHILD_NODES; ++c) {
-            if(candidates[c]) {
+            if (candidates[c]) {
                 delete candidates[c];
             }
         }
@@ -157,51 +152,47 @@ struct BVHBuildNode
         Triangles = 0;
 
         for (int c = 0; c < BVH_MAX_CHILD_NODES; ++c) {
-            if(children[c]->Triangles->size() > 0) {
+            if (children[c]->Triangles->size() > 0) {
                 Nodes.push_back(children[c]);
             }
         }
 
         for (int c = 0; c < BVH_MAX_CHILD_NODES; ++c) {
-            if(children[c]->Triangles && children[c]->Triangles->size() > BVH_MAX_TRIANGLES_PER_NODE) {
+            if (children[c]->Triangles && children[c]->Triangles->size() > BVH_MAX_TRIANGLES_PER_NODE) {
                 children[c]->Split();
             }
         }
     }
 
-    BVHBuildTriangle
-    GetTriangle(size_t index) {
-        if(Triangles) {
+    BVHBuildTriangle GetTriangle(size_t index) {
+        if (Triangles) {
             return Triangles->at(index);
         }
         return BVHBuildTriangle();
     }
 
-    size_t
-    GetTriangleCount() {
-        if(Triangles) {
+    size_t GetTriangleCount() {
+        if (Triangles) {
             return Triangles->size();
         }
         return 0;
     }
 
-    void 
-    CompactAABB() {
+    void CompactAABB() {
         Min = glm::vec3(FLT_MAX, FLT_MAX, FLT_MAX);
         Max = glm::vec3(-FLT_MAX, -FLT_MAX, -FLT_MAX);
 
-        if(Triangles) {
+        if (Triangles) {
             for (uint32_t i = 0; i < Triangles->size(); ++i) {
-               Min = glm::min(Min, Triangles->at(i).Min);
-               Max = glm::max(Max, Triangles->at(i).Max);
+                Min = glm::min(Min, Triangles->at(i).Min);
+                Max = glm::max(Max, Triangles->at(i).Max);
             }
         }
     }
 
-    void
-    Draw(int depth = 0, int maxDepth = 16) {
+    void Draw(int depth = 0, int maxDepth = 16) {
         Debug::DrawBoxMinMax(Min, Max, Debug::RGBAColor(1.0f, 0.0f, 0.0f, 1.0f));
-        if(maxDepth == depth) {
+        if (maxDepth == depth) {
             return;
         }
         for (int i = 0; i < Nodes.size(); ++i) {
@@ -216,8 +207,7 @@ struct BVHBuildNode
         delete Triangles;
     }
 
-    uint32_t 
-    GetNodeCount() {
+    uint32_t GetNodeCount() {
         uint32_t nodeCount = 1;
         for (int i = 0; i < Nodes.size(); ++i) {
             nodeCount += Nodes[i]->GetNodeCount();
@@ -231,8 +221,7 @@ struct BVH {
     uint32_t SceneTriangleCount;
     uint32_t BVHNodeCount;
 
-    BVH()
-    {
+    BVH() {
 
     }
 
@@ -241,9 +230,9 @@ struct BVH {
             Mesh* mesh = node->LinkedMesh;
             glm::mat4 transform = node->WorldMatrix;
 
-            for(int g = 0; g < mesh->Groups.size(); ++g) {
+            for (int g = 0; g < mesh->Groups.size(); ++g) {
                 Group group = mesh->Groups[g];
-                for(uint32_t i = group.IndexStart; i < group.IndexStart + group.IndexCount; i+=3) {
+                for (uint32_t i = group.IndexStart; i < group.IndexStart + group.IndexCount; i += 3) {
                     uint32_t i0 = mesh->Indices[i + 0];
                     uint32_t i1 = mesh->Indices[i + 1];
                     uint32_t i2 = mesh->Indices[i + 2];
@@ -254,21 +243,7 @@ struct BVH {
 
                     BVHBuildTriangle bvhTriangle;
                     bvhTriangle.MaterialIndex = group.MaterialIndex;
-                    bvhTriangle.A = glm::vec3(transform * glm::vec4(v0.Position, 1));
-                    bvhTriangle.B = glm::vec3(transform * glm::vec4(v1.Position, 1));
-                    bvhTriangle.C = glm::vec3(transform * glm::vec4(v2.Position, 1));
-
-                    bvhTriangle.TexCoordA = glm::packHalf2x16(v0.TextureCoordinates);
-                    bvhTriangle.TexCoordB = glm::packHalf2x16(v1.TextureCoordinates);
-                    bvhTriangle.TexCoordC = glm::packHalf2x16(v2.TextureCoordinates);
-
-                    bvhTriangle.Min = bvhTriangle.A;
-                    bvhTriangle.Max = bvhTriangle.A;
-                    bvhTriangle.Min = glm::min(bvhTriangle.Min, bvhTriangle.B);
-                    bvhTriangle.Min = glm::min(bvhTriangle.Min, bvhTriangle.C);
-                    bvhTriangle.Max = glm::max(bvhTriangle.Max, bvhTriangle.B);
-                    bvhTriangle.Max = glm::max(bvhTriangle.Max, bvhTriangle.C);
-
+                    buildTriangle(&bvhTriangle, transform, v0, v1, v2);
                     BVHRoot->Min = glm::min(BVHRoot->Min, bvhTriangle.Min);
                     BVHRoot->Max = glm::max(BVHRoot->Max, bvhTriangle.Max);
                     BVHRoot->Triangles->push_back(bvhTriangle);
@@ -278,6 +253,23 @@ struct BVH {
         for (size_t i = 0; i < node->Children.size(); i++) {
             AddTrianglesToRoot(node->Children[i]);
         }
+    }
+
+    BVHBuildTriangle buildTriangle(BVHBuildTriangle* bvhTriangle, glm::mat4 transform, Vertex v0, Vertex v1, Vertex v2) {
+        bvhTriangle->A = glm::vec3(transform * glm::vec4(v0.Position, 1));
+        bvhTriangle->B = glm::vec3(transform * glm::vec4(v1.Position, 1));
+        bvhTriangle->C = glm::vec3(transform * glm::vec4(v2.Position, 1));
+
+        bvhTriangle->TexCoordA = glm::packHalf2x16(v0.TextureCoordinates);
+        bvhTriangle->TexCoordB = glm::packHalf2x16(v1.TextureCoordinates);
+        bvhTriangle->TexCoordC = glm::packHalf2x16(v2.TextureCoordinates);
+
+        bvhTriangle->Min = bvhTriangle->A;
+        bvhTriangle->Max = bvhTriangle->A;
+        bvhTriangle->Min = glm::min(bvhTriangle->Min, bvhTriangle->B);
+        bvhTriangle->Min = glm::min(bvhTriangle->Min, bvhTriangle->C);
+        bvhTriangle->Max = glm::max(bvhTriangle->Max, bvhTriangle->B);
+        bvhTriangle->Max = glm::max(bvhTriangle->Max, bvhTriangle->C);
     }
 
     void GenerateBVH(Scene* scene) {
@@ -293,10 +285,25 @@ struct BVH {
         GlobalProfiler.StopCPUQuery(querySplit);
     }
 
-    void 
-    Draw(int maxNodeLevel) {
-        if(BVHRoot) {
+    void Draw(int maxNodeLevel) {
+        if (BVHRoot) {
             BVHRoot->Draw(0, maxNodeLevel);
         }
     }
+};
+
+struct IterativeNode {
+    int childrenStart;
+    int childCount;
+    int triangleCount;
+    int triangleStart;
+    glm::vec3 aabbMin;
+    glm::vec3 aabbMax;
+};
+
+struct Triangle {
+    glm::vec3 v0;
+    glm::vec3 v1;
+    glm::vec3 v2;
+    int materialIndex;
 };
