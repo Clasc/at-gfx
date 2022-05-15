@@ -1,4 +1,3 @@
-
 struct BVHBuildTriangle {
     glm::vec3 Min;
     glm::vec3 Max;
@@ -214,6 +213,57 @@ struct BVHBuildNode {
         }
         return nodeCount;
     }
+
+
+};
+
+struct IterativeNode {
+    size_t childrenStart;
+    size_t childCount;
+    size_t triangleCount;
+    size_t triangleStart;
+    glm::vec3 aabbMin;
+    glm::vec3 aabbMax;
+
+    IterativeNode(const BVHBuildNode* bvhNode, size_t childrenStart, size_t triangleStart) {
+        childCount = bvhNode->Nodes.size();
+        this->childrenStart = childCount == 0 ? 0 : childrenStart;
+
+        triangleCount = bvhNode->Triangles ? bvhNode->Triangles->size() : 0;
+        this->triangleStart = triangleCount == 0 ? 0 : triangleStart;
+
+        aabbMin = bvhNode->Min;
+        aabbMax = bvhNode->Max;
+    }
+};
+
+struct IterativeBVH {
+    std::vector<IterativeNode> nodes;
+    std::vector<BVHBuildTriangle*> triangles;
+
+    IterativeBVH() {
+        nodes = std::vector<IterativeNode>();
+        triangles = std::vector<BVHBuildTriangle*>();
+    }
+
+    void convertBvhToIterative(const BVHBuildNode* bvhNode) {
+        auto triangleOffset = triangles.size();
+        if (bvhNode == nullptr) {
+            return;
+        }
+
+        if (bvhNode->Triangles) {
+            for (uint32_t i = 0; i < bvhNode->Triangles->size(); ++i) {
+                triangles.push_back(&bvhNode->Triangles->at(i));
+            }
+        }
+
+        auto childrenStart = nodes.size() + 1;
+        nodes.push_back(IterativeNode(bvhNode, childrenStart, triangleOffset));
+        for (auto node : bvhNode->Nodes) {
+            convertBvhToIterative(node);
+        }
+    }
 };
 
 struct BVH {
@@ -221,9 +271,7 @@ struct BVH {
     uint32_t SceneTriangleCount;
     uint32_t BVHNodeCount;
 
-    BVH() {
-
-    }
+    BVH() {}
 
     void AddTrianglesToRoot(Node* node) {
         if (node->LinkedMesh) {
@@ -255,7 +303,7 @@ struct BVH {
         }
     }
 
-    BVHBuildTriangle buildTriangle(BVHBuildTriangle* bvhTriangle, glm::mat4 transform, Vertex v0, Vertex v1, Vertex v2) {
+    void buildTriangle(BVHBuildTriangle* bvhTriangle, glm::mat4 transform, Vertex v0, Vertex v1, Vertex v2) {
         bvhTriangle->A = glm::vec3(transform * glm::vec4(v0.Position, 1));
         bvhTriangle->B = glm::vec3(transform * glm::vec4(v1.Position, 1));
         bvhTriangle->C = glm::vec3(transform * glm::vec4(v2.Position, 1));
@@ -283,6 +331,9 @@ struct BVH {
         BVHRoot->Split();
         BVHNodeCount = BVHRoot->GetNodeCount();
         GlobalProfiler.StopCPUQuery(querySplit);
+
+        auto iterativeBvh = IterativeBVH();
+        iterativeBvh.convertBvhToIterative(BVHRoot);
     }
 
     void Draw(int maxNodeLevel) {
@@ -290,20 +341,4 @@ struct BVH {
             BVHRoot->Draw(0, maxNodeLevel);
         }
     }
-};
-
-struct IterativeNode {
-    int childrenStart;
-    int childCount;
-    int triangleCount;
-    int triangleStart;
-    glm::vec3 aabbMin;
-    glm::vec3 aabbMax;
-};
-
-struct Triangle {
-    glm::vec3 v0;
-    glm::vec3 v1;
-    glm::vec3 v2;
-    int materialIndex;
 };
