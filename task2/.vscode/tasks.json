@@ -6,7 +6,7 @@
         {
             "label": "build",
             "type": "shell",
-            "command": "${workspaceFolder}\\build_debug.bat",
+            "command": "${workspaceFolder}${pathSeparator}build_debug.bat",
         }
     ]
 }
