@@ -235,13 +235,6 @@ struct IterativeBVH {
         triangles = std::vector<BVHBuildTriangle*>();
     }
 
-    void makeIterativeNode(IterativeNode* outNode, const BVHBuildNode* bvhNode, size_t childrenStart, size_t triangleStart) {
-        outNode->childCount = bvhNode->Nodes.size();
-        outNode->triangleCount = bvhNode->Triangles ? bvhNode->Triangles->size() : 0;
-        outNode->aabbMin = bvhNode->Min;
-        outNode->aabbMax = bvhNode->Max;
-    }
-
     void flatten(BVHBuildNode* root) {
         if (!root) {
             LogError("Root of bvh is Null!");
@@ -256,23 +249,28 @@ struct IterativeBVH {
 
     size_t convertBvhToIterative(const BVHBuildNode* bvhNode, size_t* offset) {
         auto currentNode = &nodes[*offset];
-        auto nextOffset = (*offset)++;
+        auto oldOffset = (*offset)++;
+
         if (bvhNode == nullptr) {
-            return nextOffset;
+            return oldOffset;
         }
 
-        auto triangleOffset = triangles.size();
+        currentNode->aabbMin = bvhNode->Min;
+        currentNode->aabbMax = bvhNode->Max;
+        currentNode->childCount = bvhNode->Nodes.size();
+        currentNode->triangleCount = bvhNode->Triangles ? bvhNode->Triangles->size() : 0;
+        currentNode->triangleStart = triangles.size();
+
         if (bvhNode->Triangles) {
             for (uint32_t i = 0; i < bvhNode->Triangles->size(); ++i) {
                 triangles.push_back(&bvhNode->Triangles->at(i));
             }
-            return nextOffset;
+            return oldOffset;
         }
 
         convertBvhToIterative(bvhNode->Nodes[0], offset);
-        makeIterativeNode(currentNode, bvhNode, nextOffset, triangleOffset);
         currentNode->childrenStart = convertBvhToIterative(bvhNode->Nodes[1], offset);
-        return nextOffset;
+        return oldOffset;
     }
 };
 
